@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Task Board</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .kanban-column {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            min-height: 500px;
+            padding: 15px;
+            border: 2px dashed transparent;
+            transition: all 0.3s ease;
+        }
+
+        .kanban-column.drag-over {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+        }
+
+        .task-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: move;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .task-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+
+        .task-card.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+
+        .priority-high { border-left: 4px solid #dc3545; }
+        .priority-medium { border-left: 4px solid #fd7e14; }
+        .priority-low { border-left: 4px solid #198754; }
+
+        .chat-container {
+            height: 350px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .chat-message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .chat-user {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+
+        .chat-bot {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .chat-bot-typing {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .live-indicator {
+            color: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        .live-indicator.disconnected {
+            color: #dc3545;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            min-width: 300px;
+        }
+
+        .task-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .task-card:hover .task-actions {
+            opacity: 1;
+        }
+
+        .overdue-indicator {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: none;
+        }
+
+        .loading.show {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid mt-3">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="fas fa-tasks"></i> Team Task Board</h1>
+            <p class="text-muted">Projekt: <span id="project-name">Quarkus Training Vorbereitung</span></p>
+        </div>
+        <div class="col-md-4 text-end">
+                <span id="connection-status" class="live-indicator">
+                    <i class="fas fa-circle"></i> <span id="status-text">Verbinde...</span>
+                </span>
+            <button class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                <i class="fas fa-plus"></i> Neue Aufgabe
+            </button>
+            <button class="btn btn-secondary ms-1" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i> <span class="loading spinner-border spinner-border-sm"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Live Notifications -->
+    <div id="notifications-container"></div>
+
+    <!-- Kanban Board -->
+    <div class="row mb-4" id="kanban-board">
+        <div class="col-md-3">
+            <div class="kanban-column" data-status="TODO" id="todo-column">
+                <h5 class="mb-3">
+                    <i class="fas fa-inbox"></i> To Do
+                    <span class="badge bg-secondary" id="todo-count">0</span>
+                </h5>
+                <div class="kanban-tasks" id="TODO"></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kanban-column" data-status="IN_PROGRESS" id="progress-column">
+                <h5 class="mb-3">
+                    <i class="fas fa-play"></i> In Progress
+                    <span class="badge bg-secondary" id="progress-count">0</span>
+                </h5>
+                <div class="kanban-tasks" id="IN_PROGRESS"></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kanban-column" data-status="REVIEW" id="review-column">
+                <h5 class="mb-3">
+                    <i class="fas fa-eye"></i> Review
+                    <span class="badge bg-secondary" id="review-count">0</span>
+                </h5>
+                <div class="kanban-tasks" id="REVIEW"></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kanban-column" data-status="DONE" id="done-column">
+                <h5 class="mb-3">
+                    <i class="fas fa-check"></i> Done
+                    <span class="badge bg-secondary" id="done-count">0</span>
+                </h5>
+                <div class="kanban-tasks" id="DONE"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Chatbot and Statistics -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-robot"></i> Task Assistant (KI-Bot)</h5>
+                    <span id="chat-status" class="badge bg-secondary">Offline</span>
+                </div>
+                <div class="card-body">
+                    <div class="chat-container" id="chatContainer">
+                        <div class="chat-message chat-bot">
+                            <strong>Bot:</strong> Verbinde mit dem Server...
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="chatInput"
+                                   placeholder="Frage zum Projekt..." disabled>
+                            <button class="btn btn-primary" id="sendChatBtn" onclick="sendChatMessage()" disabled>
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                Beispiele: "Welche Tasks sind überfällig?", "Zeige mir alle High Priority Tasks", "Was arbeitet Max gerade?"
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar"></i> Projekt Statistiken</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-3" id="stats-overview">
+                        <div class="col-3">
+                            <h3 class="text-primary" id="total-tasks">0</h3>
+                            <small>Gesamt Tasks</small>
+                        </div>
+                        <div class="col-3">
+                            <h3 class="text-warning" id="in-progress-tasks">0</h3>
+                            <small>In Arbeit</small>
+                        </div>
+                        <div class="col-3">
+                            <h3 class="text-success" id="done-tasks">0</h3>
+                            <small>Erledigt</small>
+                        </div>
+                        <div class="col-3">
+                            <h3 class="text-danger" id="overdue-tasks">0</h3>
+                            <small>Überfällig</small>
+                        </div>
+                    </div>
+
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" id="completion-progress"
+                             style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            0% abgeschlossen
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6>Team Members</h6>
+                    <div class="d-flex flex-wrap" id="team-members">
+                        <!-- Team members will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Neue Aufgabe erstellen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTaskForm">
+                    <div class="mb-3">
+                        <label class="form-label">Titel *</label>
+                        <input type="text" class="form-control" id="taskTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Beschreibung</label>
+                        <textarea class="form-control" id="taskDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Zugewiesen an</label>
+                        <select class="form-control" id="taskAssignee">
+                            <option value="">Nicht zugewiesen</option>
+                            <!-- Options will be loaded dynamically -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Priorität</label>
+                        <select class="form-control" id="taskPriority">
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM" selected>Medium</option>
+                            <option value="HIGH">High</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Deadline (optional)</label>
+                        <input type="datetime-local" class="form-control" id="taskDueDate">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" onclick="createTask()">
+                    <span class="loading spinner-border spinner-border-sm"></span>
+                    Task erstellen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Task Modal -->
+<div class="modal fade" id="editTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Task bearbeiten</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTaskForm">
+                    <input type="hidden" id="editTaskId">
+                    <div class="mb-3">
+                        <label class="form-label">Titel *</label>
+                        <input type="text" class="form-control" id="editTaskTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Beschreibung</label>
+                        <textarea class="form-control" id="editTaskDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Zugewiesen an</label>
+                        <select class="form-control" id="editTaskAssignee">
+                            <option value="">Nicht zugewiesen</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Priorität</label>
+                        <select class="form-control" id="editTaskPriority">
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="HIGH">High</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Deadline</label>
+                        <input type="datetime-local" class="form-control" id="editTaskDueDate">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" onclick="deleteTask()">
+                    <i class="fas fa-trash"></i> Löschen
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" onclick="updateTask()">
+                    <span class="loading spinner-border spinner-border-sm"></span>
+                    Speichern
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Configuration
+    const API_BASE = 'http://localhost:8080/api';
+    const WS_BASE = 'ws://localhost:8080/ws';
+    const PROJECT_ID = 1;
+
+    // Global state
+    let boardWebSocket = null;
+    let chatWebSocket = null;
+    let tasks = [];
+    let members = [];
+    let currentEditTaskId = null;
+    let chatSessionId = generateUUID();
+
+    // Initialize application
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeApp();
+    });
+
+    async function initializeApp() {
+        try {
+            showLoading(true);
+            await loadMembers();
+            await loadTasks();
+            await loadStatistics();
+            connectWebSockets();
+            setupDragAndDrop();
+            setupChatInput();
+            showNotification('Anwendung erfolgreich geladen', 'success');
+        } catch (error) {
+            console.error('Fehler beim Initialisieren:', error);
+            showNotification('Fehler beim Laden der Daten', 'danger');
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    // API Functions
+    async function loadTasks() {
+        try {
+            const response = await fetch(`${API_BASE}/tasks?projectId=${PROJECT_ID}`);
+            if (!response.ok) throw new Error('Failed to load tasks');
+
+            tasks = await response.json();
+            renderTasks();
+            updateColumnCounts();
+        } catch (error) {
+            console.error('Error loading tasks:', error);
+            showNotification('Fehler beim Laden der Tasks', 'danger');
+        }
+    }
+
+    async function loadMembers() {
+        try {
+            const response = await fetch(`${API_BASE}/members`);
+            if (!response.ok) throw new Error('Failed to load members');
+
+            members = await response.json();
+            populateMemberSelects();
+            renderTeamMembers();
+        } catch (error) {
+            console.error('Error loading members:', error);
+            showNotification('Fehler beim Laden der Team-Mitglieder', 'danger');
+        }
+    }
+
+    async function loadStatistics() {
+        try {
+            const response = await fetch(`${API_BASE}/tasks/stats/${PROJECT_ID}`);
+            if (!response.ok) throw new Error('Failed to load statistics');
+
+            const stats = await response.json();
+            updateStatistics(stats);
+        } catch (error) {
+            console.error('Error loading statistics:', error);
+        }
+    }
+
+    async function createTask() {
+        const title = document.getElementById('taskTitle').value.trim();
+        const description = document.getElementById('taskDescription').value.trim();
+        const assigneeId = document.getElementById('taskAssignee').value || null;
+        const priority = document.getElementById('taskPriority').value;
+        const dueDate = document.getElementById('taskDueDate').value || null;
+
+        if (!title) {
+            showNotification('Titel ist erforderlich', 'warning');
+            return;
+        }
+
+        try {
+            showLoading(true, 'addTaskModal');
+
+            const taskData = {
+                projectId: PROJECT_ID,
+                title: title,
+                description: description,
+                assignedToId: assigneeId ? parseInt(assigneeId) : null,
+                priority: priority,
+                dueDate: dueDate
+            };
+
+            const response = await fetch(`${API_BASE}/tasks`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(taskData)
+            });
+
+            if (!response.ok) throw new Error('Failed to create task');
+
+            const newTask = await response.json();
+            tasks.push(newTask);
+
+            // Close modal and reset form
+            bootstrap.Modal.getInstance(document.getElementById('addTaskModal')).hide();
+            document.getElementById('addTaskForm').reset();
+
+            renderTasks();
+            updateColumnCounts();
+            loadStatistics();
+
+            showNotification(`Task "${title}" wurde erstellt`, 'success');
+        } catch (error) {
+            console.error('Error creating task:', error);
+            showNotification('Fehler beim Erstellen der Task', 'danger');
+        } finally {
+            showLoading(false, 'addTaskModal');
+        }
+    }
+
+    async function updateTaskStatus(taskId, newStatus) {
+        try {
+            const response = await fetch(`${API_BASE}/tasks/${taskId}/status?status=${newStatus}`, {
+                method: 'PUT'
+            });
+
+            if (!response.ok) throw new Error('Failed to update task status');
+
+            const updatedTask = await response.json();
+
+            // Update local task
+            const taskIndex = tasks.findIndex(t => t.id === taskId);
+            if (taskIndex !== -1) {
+                tasks[taskIndex] = updatedTask;
+            }
+
+            renderTasks();
+            updateColumnCounts();
+            loadStatistics();
+        } catch (error) {
+            console.error('Error updating task status:', error);
+            showNotification('Fehler beim Aktualisieren der Task', 'danger');
+        }
+    }
+
+    async function deleteTask() {
+        if (!currentEditTaskId) return;
+
+        if (!confirm('Task wirklich löschen?')) return;
+
+        try {
+            showLoading(true, 'editTaskModal');
+
+            const response = await fetch(`${API_BASE}/tasks/${currentEditTaskId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) throw new Error('Failed to delete task');
+
+            // Remove from local array
+            tasks = tasks.filter(t => t.id !== currentEditTaskId);
+
+            bootstrap.Modal.getInstance(document.getElementById('editTaskModal')).hide();
+
+            renderTasks();
+            updateColumnCounts();
+            loadStatistics();
+
+            showNotification('Task wurde gelöscht', 'info');
+        } catch (error) {
+            console.error('Error deleting task:', error);
+            showNotification('Fehler beim Löschen der Task', 'danger');
+        } finally {
+            showLoading(false, 'editTaskModal');
+        }
+    }
+
+    async function updateTask() {
+        if (!currentEditTaskId) return;
+
+        const title = document.getElementById('editTaskTitle').value.trim();
+        const description = document.getElementById('editTaskDescription').value.trim();
+        const assigneeId = document.getElementById('editTaskAssignee').value || null;
+        const priority = document.getElementById('editTaskPriority').value;
+        const dueDate = document.getElementById('editTaskDueDate').value || null;
+
+        if (!title) {
+            showNotification('Titel ist erforderlich', 'warning');
+            return;
+        }
+
+        try {
+            showLoading(true, 'editTaskModal');
+
+            const taskData = {
+                title: title,
+                description: description,
+                assignedToId: assigneeId ? parseInt(assigneeId) : null,
+                priority: priority,
+                dueDate: dueDate
+            };
+
+            const response = await fetch(`${API_BASE}/tasks/${currentEditTaskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(taskData)
+            });
+
+            if (!response.ok) throw new Error('Failed to update task');
+
+            const updatedTask = await response.json();
+
+            // Update local task
+            const taskIndex = tasks.findIndex(t => t.id === currentEditTaskId);
+            if (taskIndex !== -1) {
+                tasks[taskIndex] = updatedTask;
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('editTaskModal')).hide();
+
+            renderTasks();
+            updateColumnCounts();
+            loadStatistics();
+
+            showNotification(`Task "${title}" wurde aktualisiert`, 'success');
+        } catch (error) {
+            console.error('Error updating task:', error);
+            showNotification('Fehler beim Aktualisieren der Task', 'danger');
+        } finally {
+            showLoading(false, 'editTaskModal');
+        }
+    }
+
+    // Rendering Functions
+    function renderTasks() {
+        // Clear all columns
+        document.getElementById('TODO').innerHTML = '';
+        document.getElementById('IN_PROGRESS').innerHTML = '';
+        document.getElementById('REVIEW').innerHTML = '';
+        document.getElementById('DONE').innerHTML = '';
+
+        tasks.forEach(task => {
+            const taskElement = createTaskElement(task);
+            const columnElement = document.getElementById(task.status);
+            if (columnElement) {
+                columnElement.appendChild(taskElement);
+            }
+        });
+    }
+
+    function createTaskElement(task) {
+        const taskDiv = document.createElement('div');
+        taskDiv.className = `task-card priority-${task.priority.toLowerCase()}`;
+        taskDiv.draggable = true;
+        taskDiv.setAttribute('data-task-id', task.id);
+
+        const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE';
+        const assigneeName = task.assignedTo ? task.assignedTo.name : 'Unassigned';
+        const priorityBadgeClass = {
+            'LOW': 'bg-success',
+            'MEDIUM': 'bg-warning',
+            'HIGH': 'bg-danger'
+        }[task.priority];
+
+        const dueDateHtml = task.dueDate ?
+            `<small class="text-muted ${isOverdue ? 'overdue-indicator' : ''}">
+                    <i class="fas fa-calendar"></i> ${formatDate(task.dueDate)}
+                    ${isOverdue ? ' (ÜBERFÄLLIG)' : ''}
+                </small>` : '';
+
+        taskDiv.innerHTML = `
+                <div class="task-actions">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editTask(${task.id})" title="Bearbeiten">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+                <h6>${task.title}</h6>
+                ${task.description ? `<p class="text-muted small">${task.description}</p>` : ''}
+                ${dueDateHtml}
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="badge ${priorityBadgeClass}">${task.priority}</span>
+                    <small class="text-muted">
+                        <i class="fas fa-user"></i> ${assigneeName}
+                    </small>
+                </div>
+            `;
+
+        // Add drag event listeners
+        taskDiv.addEventListener('dragstart', handleDragStart);
+        taskDiv.addEventListener('dragend', handleDragEnd);
+
+        return taskDiv;
+    }
+
+    function populateMemberSelects() {
+        const selects = ['taskAssignee', 'editTaskAssignee'];
+
+        selects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            // Keep the first option (Nicht zugewiesen)
+            select.innerHTML = '<option value="">Nicht zugewiesen</option>';
+
+            members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member.id;
+                option.textContent = `${member.name} (${member.role})`;
+                select.appendChild(option);
+            });
+        });
+    }
+
+    function renderTeamMembers() {
+        const container = document.getElementById('team-members');
+        container.innerHTML = '';
+
+        members.forEach(member => {
+            const memberTaskCount = tasks.filter(task =>
+                task.assignedTo && task.assignedTo.id === member.id
+            ).length;
+
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-primary me-2 mb-1';
+            badge.textContent = `${member.name} (${memberTaskCount} Tasks)`;
+            container.appendChild(badge);
+        });
+    }
+
+    function updateColumnCounts() {
+        const counts = {
+            'TODO': 0,
+            'IN_PROGRESS': 0,
+            'REVIEW': 0,
+            'DONE': 0
+        };
+
+        tasks.forEach(task => {
+            if (counts.hasOwnProperty(task.status)) {
+                counts[task.status]++;
+            }
+        });
+
+        document.getElementById('todo-count').textContent = counts.TODO;
+        document.getElementById('progress-count').textContent = counts.IN_PROGRESS;
+        document.getElementById('review-count').textContent = counts.REVIEW;
+        document.getElementById('done-count').textContent = counts.DONE;
+    }
+
+    function updateStatistics(stats) {
+        document.getElementById('total-tasks').textContent = stats.totalCount;
+        document.getElementById('in-progress-tasks').textContent = stats.inProgressCount;
+        document.getElementById('done-tasks').textContent = stats.doneCount;
+        document.getElementById('overdue-tasks').textContent = stats.overdueCount;
+
+        const progressBar = document.getElementById('completion-progress');
+        const percentage = Math.round(stats.completionPercentage);
+        progressBar.style.width = `${percentage}%`;
+        progressBar.setAttribute('aria-valuenow', percentage);
+        progressBar.textContent = `${percentage}% abgeschlossen`;
+    }
+
+    // Drag and Drop Functions
+    function setupDragAndDrop() {
+        const columns = document.querySelectorAll('.kanban-column');
+
+        columns.forEach(column => {
+            column.addEventListener('dragover', handleDragOver);
+            column.addEventListener('drop', handleDrop);
+            column.addEventListener('dragenter', handleDragEnter);
+            column.addEventListener('dragleave', handleDragLeave);
+        });
+    }
+
+    function handleDragStart(e) {
+        e.dataTransfer.setData('text/plain', e.target.getAttribute('data-task-id'));
+        e.target.classList.add('dragging');
+    }
+
+    function handleDragEnd(e) {
+        e.target.classList.remove('dragging');
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+    }
+
+    function handleDragEnter(e) {
+        e.preventDefault();
+        e.currentTarget.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+
+        const taskId = parseInt(e.dataTransfer.getData('text/plain'));
+        const newStatus = e.currentTarget.getAttribute('data-status');
+
+        const task = tasks.find(t => t.id === taskId);
+        if (task && task.status !== newStatus) {
+            updateTaskStatus(taskId, newStatus);
+        }
+    }
+
+    // WebSocket Functions
+    function connectWebSockets() {
+        connectBoardWebSocket();
+        connectChatWebSocket();
+    }
+
+    function connectBoardWebSocket() {
+        try {
+            boardWebSocket = new WebSocket(`${WS_BASE}/board/${PROJECT_ID}`);
+
+            boardWebSocket.onopen = function() {
+                updateConnectionStatus(true);
+                console.log('Board WebSocket connected');
+            };
+
+            boardWebSocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleBoardMessage(data);
+                } catch (error) {
+                    console.error('Error parsing board message:', error);
+                }
+            };
+
+            boardWebSocket.onclose = function() {
+                updateConnectionStatus(false);
+                console.log('Board WebSocket disconnected');
+                // Reconnect after 3 seconds
+                setTimeout(connectBoardWebSocket, 3000);
+            };
+
+            boardWebSocket.onerror = function(error) {
+                console.error('Board WebSocket error:', error);
+                updateConnectionStatus(false);
+            };
+        } catch (error) {
+            console.error('Error connecting board WebSocket:', error);
+            updateConnectionStatus(false);
+        }
+    }
+
+    function connectChatWebSocket() {
+        try {
+            chatWebSocket = new WebSocket(`${WS_BASE}/chat/${PROJECT_ID}`);
+
+            chatWebSocket.onopen = function() {
+                document.getElementById('chat-status').textContent = 'Online';
+                document.getElementById('chat-status').className = 'badge bg-success';
+                document.getElementById('chatInput').disabled = false;
+                document.getElementById('sendChatBtn').disabled = false;
+                console.log('Chat WebSocket connected');
+            };
+
+            chatWebSocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleChatMessage(data);
+                } catch (error) {
+                    console.error('Error parsing chat message:', error);
+                }
+            };
+
+            chatWebSocket.onclose = function() {
+                document.getElementById('chat-status').textContent = 'Offline';
+                document.getElementById('chat-status').className = 'badge bg-danger';
+                document.getElementById('chatInput').disabled = true;
+                document.getElementById('sendChatBtn').disabled = true;
+                console.log('Chat WebSocket disconnected');
+                // Reconnect after 3 seconds
+                setTimeout(connectChatWebSocket, 3000);
+            };
+
+            chatWebSocket.onerror = function(error) {
+                console.error('Chat WebSocket error:', error);
+            };
+        } catch (error) {
+            console.error('Error connecting chat WebSocket:', error);
+        }
+    }
+
+    function handleBoardMessage(data) {
+        console.log('Board message received:', data);
+
+        switch(data.type) {
+            case 'connected':
+                showNotification('Mit Board verbunden', 'success');
+                break;
+            case 'user_joined':
+                showNotification(data.message, 'info');
+                break;
+            case 'user_left':
+                showNotification(data.message, 'info');
+                break;
+            case 'task_created':
+                showNotification(data.message, 'success');
+                loadTasks(); // Refresh tasks
+                loadStatistics();
+                break;
+            case 'task_updated':
+                showNotification(data.message, 'info');
+                loadTasks(); // Refresh tasks
+                loadStatistics();
+                break;
+            case 'status_changed':
+                showNotification(data.message, 'info');
+                loadTasks(); // Refresh tasks
+                loadStatistics();
+                break;
+            default:
+                console.log('Unknown board message type:', data.type);
+        }
+    }
+
+    function handleChatMessage(data) {
+        console.log('Chat message received:', data);
+
+        switch(data.type) {
+            case 'bot_message':
+                addChatMessage(data.message, false);
+                break;
+            case 'bot_typing':
+                addChatMessage(data.message, false, true);
+                // Remove typing indicator after 2 seconds
+                setTimeout(() => {
+                    const typingMessages = document.querySelectorAll('.chat-bot-typing');
+                    typingMessages.forEach(msg => msg.remove());
+                }, 2000);
+                break;
+            case 'bot_error':
+                addChatMessage(`❌ ${data.message}`, false);
+                break;
+            case 'error':
+                addChatMessage(`⚠️ ${data.message}`, false);
+                break;
+            default:
+                console.log('Unknown chat message type:', data.type);
+        }
+    }
+
+    function updateConnectionStatus(connected) {
+        const statusElement = document.getElementById('connection-status');
+        const statusText = document.getElementById('status-text');
+
+        if (connected) {
+            statusElement.className = 'live-indicator';
+            statusText.textContent = 'Live';
+        } else {
+            statusElement.className = 'live-indicator disconnected';
+            statusText.textContent = 'Offline';
+        }
+    }
+
+    // Chat Functions
+    function setupChatInput() {
+        const chatInput = document.getElementById('chatInput');
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        });
+    }
+
+    function sendChatMessage() {
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+
+        if (!message || !chatWebSocket || chatWebSocket.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        // Add user message to chat
+        addChatMessage(message, true);
+        input.value = '';
+
+        // Send to server
+        const chatMessage = {
+            type: 'user_message',
+            message: message,
+            sessionId: chatSessionId
+        };
+
+        chatWebSocket.send(JSON.stringify(chatMessage));
+    }
+
+    function addChatMessage(message, isUser, isTyping = false) {
+        const chatContainer = document.getElementById('chatContainer');
+        const messageDiv = document.createElement('div');
+
+        if (isTyping) {
+            messageDiv.className = 'chat-message chat-bot-typing';
+        } else {
+            messageDiv.className = `chat-message ${isUser ? 'chat-user' : 'chat-bot'}`;
+        }
+
+        const sender = isUser ? 'Du' : 'Bot';
+        messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+
+        chatContainer.appendChild(messageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Modal Functions
+    function editTask(taskId) {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        currentEditTaskId = taskId;
+
+        // Populate form
+        document.getElementById('editTaskId').value = task.id;
+        document.getElementById('editTaskTitle').value = task.title;
+        document.getElementById('editTaskDescription').value = task.description || '';
+        document.getElementById('editTaskAssignee').value = task.assignedTo ? task.assignedTo.id : '';
+        document.getElementById('editTaskPriority').value = task.priority;
+
+        if (task.dueDate) {
+            // Convert to local datetime format
+            const date = new Date(task.dueDate);
+            const localDateTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+                .toISOString().slice(0, 16);
+            document.getElementById('editTaskDueDate').value = localDateTime;
+        } else {
+            document.getElementById('editTaskDueDate').value = '';
+        }
+
+        // Show modal
+        new bootstrap.Modal(document.getElementById('editTaskModal')).show();
+    }
+
+    // Utility Functions
+    async function refreshData() {
+        try {
+            showLoading(true);
+            await Promise.all([
+                loadTasks(),
+                loadStatistics()
+            ]);
+            showNotification('Daten erfolgreich aktualisiert', 'success');
+        } catch (error) {
+            console.error('Error refreshing data:', error);
+            showNotification('Fehler beim Aktualisieren der Daten', 'danger');
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    function showLoading(show, modalId = null) {
+        if (modalId) {
+            const modal = document.getElementById(modalId);
+            const loadingSpinners = modal.querySelectorAll('.loading');
+            loadingSpinners.forEach(spinner => {
+                spinner.classList.toggle('show', show);
+            });
+        } else {
+            const loadingSpinners = document.querySelectorAll('.loading');
+            loadingSpinners.forEach(spinner => {
+                spinner.classList.toggle('show', show);
+            });
+        }
+    }
+
+    function showNotification(message, type = 'info') {
+        const container = document.getElementById('notifications-container');
+        const notificationId = 'notification-' + Date.now();
+
+        const alertDiv = document.createElement('div');
+        alertDiv.id = notificationId;
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show notification`;
+        alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+        container.appendChild(alertDiv);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            const notification = document.getElementById(notificationId);
+            if (notification) {
+                bootstrap.Alert.getOrCreateInstance(notification).close();
+            }
+        }, 5000);
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = date.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        const formattedDate = date.toLocaleDateString('de-DE', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        if (diffDays < 0) {
+            return formattedDate;
+        } else if (diffDays === 0) {
+            return `Heute, ${date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+        } else if (diffDays === 1) {
+            return `Morgen, ${date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+        } else {
+            return formattedDate;
+        }
+    }
+
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    // Heartbeat to keep WebSocket connections alive
+    setInterval(() => {
+        if (boardWebSocket && boardWebSocket.readyState === WebSocket.OPEN) {
+            boardWebSocket.send(JSON.stringify({ type: 'ping' }));
+        }
+    }, 30000); // Every 30 seconds
+
+    // Handle page visibility change (reconnect when page becomes visible)
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            // Page became visible, check connections
+            if (!boardWebSocket || boardWebSocket.readyState !== WebSocket.OPEN) {
+                connectBoardWebSocket();
+            }
+            if (!chatWebSocket || chatWebSocket.readyState !== WebSocket.OPEN) {
+                connectChatWebSocket();
+            }
+            // Refresh data
+            refreshData();
+        }
+    });
+
+    // Error handling for unhandled promise rejections
+    window.addEventListener('unhandledrejection', function(event) {
+        console.error('Unhandled promise rejection:', event.reason);
+        showNotification('Ein unerwarteter Fehler ist aufgetreten', 'danger');
+    });
+</script>
+</body>
+</html>
