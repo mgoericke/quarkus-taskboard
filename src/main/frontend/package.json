@@ -1,0 +1,24 @@
+{
+  "name": "task-board-vue",
+  "version": "1.0.0",
+  "description": "Vue.js Task Board Application",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.4.0",
+    "axios": "^1.5.0",
+    "bootstrap": "^5.3.2",
+    "pinia": "^2.1.6",
+    "vue": "^3.3.4",
+    "vue-markdown-render": "^2.3.0",
+    "vue-router": "^4.2.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.3.4",
+    "vite": "^4.4.9"
+  }
+}
