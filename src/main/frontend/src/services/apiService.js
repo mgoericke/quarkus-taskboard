@@ -8,6 +8,10 @@ const apiClient = axios.create({
 })
 
 export const apiService = {
+  async getProjects() {
+    const response = await apiClient.get(`/projects`)
+    return response.data
+  },
   async getTasks(projectId) {
     const response = await apiClient.get(`/tasks?projectId=${projectId}`)
     return response.data

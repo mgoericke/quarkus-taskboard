@@ -3,6 +3,7 @@ import { apiService } from '../services/apiService'
 
 export const useTaskStore = defineStore('tasks', {
   state: () => ({
+    projects: [],
     tasks: [],
     members: [],
     statistics: {},
@@ -42,6 +43,18 @@ export const useTaskStore = defineStore('tasks', {
   },
 
   actions: {
+    async loadProjects() {
+      this.loading = true
+      this.error = null
+      try {
+        this.projects = await apiService.getProjects()
+      } catch (error) {
+        this.error = 'Fehler beim Laden der Projekte'
+        console.error('Error loading projects:', error)
+      } finally {
+        this.loading = false
+      }
+    },
     async loadTasks() {
       this.loading = true
       this.error = null
