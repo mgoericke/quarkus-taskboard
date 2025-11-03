@@ -1,4 +1,4 @@
-package de.javamark.taskboard.logic;
+package de.javamark.taskboard.control;
 
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;

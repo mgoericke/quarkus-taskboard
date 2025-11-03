@@ -1,7 +1,7 @@
-package de.javamark.taskboard.in.model;
+package de.javamark.taskboard.boundary.model;
 
-import de.javamark.taskboard.out.model.Task;
-import de.javamark.taskboard.out.model.Task.TaskStatus;
+import de.javamark.taskboard.entity.model.Task;
+import de.javamark.taskboard.entity.model.Task.TaskStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;

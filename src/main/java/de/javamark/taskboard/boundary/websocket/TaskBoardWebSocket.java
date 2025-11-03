@@ -1,6 +1,6 @@
-package de.javamark.taskboard.in.websocket;
+package de.javamark.taskboard.boundary.websocket;
 
-import de.javamark.taskboard.logic.ConnectionManager;
+import de.javamark.taskboard.control.ConnectionManager;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnTextMessage;
 import io.quarkus.websockets.next.OnOpen;

@@ -1,4 +1,4 @@
-package de.javamark.taskboard.out.model;
+package de.javamark.taskboard.entity.model;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;

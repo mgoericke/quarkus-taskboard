@@ -1,11 +1,11 @@
-package de.javamark.taskboard.in.rest;
+package de.javamark.taskboard.boundary.rest;
 
-import de.javamark.taskboard.in.model.CreateTaskRequest;
-import de.javamark.taskboard.in.model.UpdateTaskRequest;
-import de.javamark.taskboard.logic.TaskService;
-import de.javamark.taskboard.out.model.Task;
+import de.javamark.taskboard.boundary.model.CreateTaskRequest;
+import de.javamark.taskboard.boundary.model.UpdateTaskRequest;
+import de.javamark.taskboard.control.TaskService;
+import de.javamark.taskboard.entity.model.Task;
 
-import de.javamark.taskboard.out.model.Task.TaskStatus;
+import de.javamark.taskboard.entity.model.Task.TaskStatus;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;

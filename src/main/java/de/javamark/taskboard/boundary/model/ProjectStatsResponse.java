@@ -1,4 +1,4 @@
-package de.javamark.taskboard.in.model;
+package de.javamark.taskboard.boundary.model;
 
 public class ProjectStatsResponse {
     public final Long todoCount;

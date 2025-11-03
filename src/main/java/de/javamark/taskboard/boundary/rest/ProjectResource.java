@@ -1,8 +1,8 @@
-package de.javamark.taskboard.in.rest;
+package de.javamark.taskboard.boundary.rest;
 
-import de.javamark.taskboard.in.model.CreateProjectRequest;
-import de.javamark.taskboard.out.model.Project;
-import de.javamark.taskboard.out.model.Team;
+import de.javamark.taskboard.boundary.model.CreateProjectRequest;
+import de.javamark.taskboard.entity.model.Project;
+import de.javamark.taskboard.entity.model.Team;
 
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;

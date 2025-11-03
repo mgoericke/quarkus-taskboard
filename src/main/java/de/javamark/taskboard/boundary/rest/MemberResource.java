@@ -1,7 +1,7 @@
-package de.javamark.taskboard.in.rest;
+package de.javamark.taskboard.boundary.rest;
 
-import de.javamark.taskboard.out.model.Member;
-import de.javamark.taskboard.out.model.Task;
+import de.javamark.taskboard.entity.model.Member;
+import de.javamark.taskboard.entity.model.Task;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;

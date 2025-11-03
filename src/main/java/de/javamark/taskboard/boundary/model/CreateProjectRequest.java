@@ -1,6 +1,6 @@
-package de.javamark.taskboard.in.model;
+package de.javamark.taskboard.boundary.model;
 
-import de.javamark.taskboard.out.model.Project.ProjectStatus;
+import de.javamark.taskboard.entity.model.Project.ProjectStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 

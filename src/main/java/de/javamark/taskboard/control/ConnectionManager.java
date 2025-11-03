@@ -1,4 +1,4 @@
-package de.javamark.taskboard.logic;
+package de.javamark.taskboard.control;
 
 import io.quarkus.websockets.next.WebSocketConnection;
 

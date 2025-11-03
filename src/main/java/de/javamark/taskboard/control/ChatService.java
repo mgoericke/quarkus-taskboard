@@ -1,11 +1,11 @@
-package de.javamark.taskboard.logic;
+package de.javamark.taskboard.control;
 
-import de.javamark.taskboard.out.model.Member;
-import de.javamark.taskboard.out.model.Task;
+import de.javamark.taskboard.entity.model.Member;
+import de.javamark.taskboard.entity.model.Task;
 
 
-import de.javamark.taskboard.out.model.Task.Priority;
-import de.javamark.taskboard.out.model.Task.TaskStatus;
+import de.javamark.taskboard.entity.model.Task.Priority;
+import de.javamark.taskboard.entity.model.Task.TaskStatus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.control.ActivateRequestContext;
 import jakarta.inject.Inject;

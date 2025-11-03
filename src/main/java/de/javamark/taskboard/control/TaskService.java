@@ -1,12 +1,12 @@
-package de.javamark.taskboard.logic;
+package de.javamark.taskboard.control;
 
-import de.javamark.taskboard.in.model.CreateTaskRequest;
-import de.javamark.taskboard.in.model.ProjectStatsResponse;
-import de.javamark.taskboard.in.model.UpdateTaskRequest;
-import de.javamark.taskboard.out.model.Member;
-import de.javamark.taskboard.out.model.Project;
-import de.javamark.taskboard.out.model.Task;
-import de.javamark.taskboard.out.model.Task.TaskStatus;
+import de.javamark.taskboard.boundary.model.CreateTaskRequest;
+import de.javamark.taskboard.boundary.model.ProjectStatsResponse;
+import de.javamark.taskboard.boundary.model.UpdateTaskRequest;
+import de.javamark.taskboard.entity.model.Member;
+import de.javamark.taskboard.entity.model.Project;
+import de.javamark.taskboard.entity.model.Task;
+import de.javamark.taskboard.entity.model.Task.TaskStatus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.LocalDateTime;

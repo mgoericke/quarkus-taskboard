@@ -1,7 +1,7 @@
-package de.javamark.taskboard.in.model;
+package de.javamark.taskboard.boundary.model;
 
-import de.javamark.taskboard.out.model.Task.Priority;
-import de.javamark.taskboard.out.model.Task.TaskStatus;
+import de.javamark.taskboard.entity.model.Task.Priority;
+import de.javamark.taskboard.entity.model.Task.TaskStatus;
 
 import java.time.LocalDateTime;
 

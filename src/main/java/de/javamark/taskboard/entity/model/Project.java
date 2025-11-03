@@ -1,4 +1,4 @@
-package de.javamark.taskboard.out.model;
+package de.javamark.taskboard.entity.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
