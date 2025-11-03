@@ -59,9 +59,9 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { websocketService } from '../services/websocketService'
-import { useTaskStore } from '../stores/taskStore'
+import {nextTick, onMounted, ref} from 'vue'
+import {websocketService} from '../services/websocketService'
+import {useTaskStore} from '../stores/taskStore'
 import VueMarkdown from 'vue-markdown-render'
 
 export default {
@@ -140,7 +140,7 @@ export default {
       if (connected) {
         // Clear initial message and show connected message
         messages.value = []
-        addMessage('Hallo! Ich bin Ihr Task-Assistent. Wie kann ich Ihnen helfen?', false)
+        //addMessage('Hallo! Ich bin Ihr Task-Assistent. Wie kann ich Ihnen helfen?', false)
       } else {
         addMessage('Verbindung verloren. Versuche erneut zu verbinden...', false)
       }
@@ -174,7 +174,7 @@ export default {
     function generateUUID() {
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         const r = Math.random() * 16 | 0
-        const v = c == 'x' ? r : (r & 0x3 | 0x8)
+        const v = c === 'x' ? r : (r & 0x3 | 0x8)
         return v.toString(16)
       })
     }
