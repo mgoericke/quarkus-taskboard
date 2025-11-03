@@ -1,6 +1,7 @@
 package de.javamark.taskboard.boundary.websocket;
 
 import de.javamark.taskboard.control.ConnectionManager;
+import io.quarkus.logging.Log;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnTextMessage;
 import io.quarkus.websockets.next.OnOpen;
@@ -45,14 +46,14 @@ public class TaskBoardWebSocket {
 
                             connectionManager.broadcastToProject(projectIdLong, joinMessage);
                         },
-                        failure -> System.err.println("Failed to send welcome message: " + failure.getMessage())
+                        failure -> Log.error("Failed to send welcome message: " + failure.getMessage())
                 );
     }
 
     @OnTextMessage
     public void onTextMessage(String message, @PathParam String projectId, WebSocketConnection connection) {
         Long projectIdLong = Long.parseLong(projectId);
-        System.out.println("Received message from client: " + message);
+        Log.info("Received message from client: " + message);
 
         try {
             if (message.startsWith("{")) {
@@ -61,14 +62,14 @@ public class TaskBoardWebSocket {
                     connection.sendText(pongMessage)
                             .subscribe().with(
                                     success -> { /* Pong sent */ },
-                                    failure -> System.err.println("Failed to send pong: " + failure.getMessage())
+                                    failure -> Log.error("Failed to send pong: " + failure.getMessage())
                             );
                 } else if (message.contains("\"type\":\"typing\"")) {
                     connectionManager.broadcastToProject(projectIdLong, message);
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error processing WebSocket message: " + e.getMessage());
+            Log.error("Error processing WebSocket message: " + e.getMessage());
 
             String errorMessage = String.format("""
                 {
@@ -81,7 +82,7 @@ public class TaskBoardWebSocket {
             connection.sendText(errorMessage)
                     .subscribe().with(
                             success -> { /* Error message sent */ },
-                            failure -> System.err.println("Failed to send error message: " + failure.getMessage())
+                            failure -> Log.error("Failed to send error message: " + failure.getMessage())
                     );
         }
     }

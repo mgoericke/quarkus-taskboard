@@ -6,6 +6,7 @@ import de.javamark.taskboard.entity.model.Task;
 
 import de.javamark.taskboard.entity.model.Task.Priority;
 import de.javamark.taskboard.entity.model.Task.TaskStatus;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.control.ActivateRequestContext;
 import jakarta.inject.Inject;
@@ -25,26 +26,26 @@ public class ChatService {
     @ActivateRequestContext
     public String processQuestion(String question, String sessionId, Long projectId) {
         try {
-            System.out.println("Processing question: " + question);
+            Log.info("Processing question: " + question);
 
             // Load project context
             ProjectContext context = loadProjectContext(projectId);
-            System.out.println("Loaded context - Tasks: " + context.projectTasks.size() +
+            Log.info("Loaded context - Tasks: " + context.projectTasks.size() +
                     ", Members: " + context.teamMembers.size());
 
             // Question with context
             String enrichedQuestion = enrichQuestionWithContext(question, context);
-            System.out.println("Enriched question length: " + enrichedQuestion.length());
+            Log.info("Enriched question length: " + enrichedQuestion.length());
 
             // AI call mit Debugging
-            System.out.println("Calling TaskAssistant...");
+            Log.info("Calling TaskAssistant...");
             String result = taskAssistant.askAboutTasks(enrichedQuestion, sessionId);
-            System.out.println("TaskAssistant response: " + result);
+            Log.info("TaskAssistant response: " + result);
 
             return result;
 
         } catch (Exception e) {
-            System.err.println("Error in ChatService.processQuestion: " + e.getMessage());
+            Log.error("Error in ChatService.processQuestion: " + e.getMessage());
             e.printStackTrace();
 
             // Fallback-Antwort basierend auf einfachen Regeln

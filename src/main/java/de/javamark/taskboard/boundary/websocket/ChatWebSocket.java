@@ -3,6 +3,7 @@ package de.javamark.taskboard.boundary.websocket;
 import de.javamark.taskboard.control.ChatService;
 import de.javamark.taskboard.control.ConnectionManager;
 
+import io.quarkus.logging.Log;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnOpen;
 import io.quarkus.websockets.next.OnTextMessage;
@@ -40,7 +41,7 @@ public class ChatWebSocket {
         connection.sendText(welcomeMessage)
                 .subscribe().with(
                         success -> { /* Welcome message sent */ },
-                        failure -> System.err.println("Failed to send welcome message: " + failure.getMessage())
+                        failure -> Log.error("Failed to send welcome message: " + failure.getMessage())
                 );
     }
 
@@ -82,7 +83,7 @@ public class ChatWebSocket {
                                             connection.sendText(responseMessage)
                                                     .subscribe().with(
                                                             responseSuccess -> { /* Response sent */ },
-                                                            responseFailure -> System.err.println("Failed to send bot response: " + responseFailure.getMessage())
+                                                            responseFailure -> Log.error("Failed to send bot response: " + responseFailure.getMessage())
                                                     );
                                         } catch (Exception e) {
                                             String errorMessage = Json.createObjectBuilder()
@@ -95,17 +96,17 @@ public class ChatWebSocket {
                                             connection.sendText(errorMessage)
                                                     .subscribe().with(
                                                             errorSuccess -> { /* Error message sent */ },
-                                                            errorFailure -> System.err.println("Failed to send error message: " + errorFailure.getMessage())
+                                                            errorFailure -> Log.error("Failed to send error message: " + errorFailure.getMessage())
                                                     );
-                                            System.err.println("Chat service error: " + e.getMessage());
+                                            Log.error("Chat service error: " + e.getMessage());
                                         }
                                     }).start();
                                 },
-                                failure -> System.err.println("Failed to send typing indicator: " + failure.getMessage())
+                                failure -> Log.error("Failed to send typing indicator: " + failure.getMessage())
                         );
             }
         } catch (Exception e) {
-            System.err.println("Error processing chat message: " + e.getMessage());
+            Log.error("Error processing chat message: " + e.getMessage());
 
             String errorMessage = Json.createObjectBuilder()
                     .add("type", "error")
@@ -117,7 +118,7 @@ public class ChatWebSocket {
             connection.sendText(errorMessage)
                     .subscribe().with(
                             success -> { /* Error message sent */ },
-                            failure -> System.err.println("Failed to send error message: " + failure.getMessage())
+                            failure -> Log.error("Failed to send error message: " + failure.getMessage())
                     );
         }
     }

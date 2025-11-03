@@ -1,5 +1,6 @@
 package de.javamark.taskboard.control;
 
+import io.quarkus.logging.Log;
 import io.quarkus.websockets.next.WebSocketConnection;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -19,7 +20,7 @@ public class ConnectionManager {
                 .add(connection);
         connectionToProject.put(connection.id(), projectId);
 
-        System.out.println("Client connected to project " + projectId + ". Total connections: " +
+        Log.info("Client connected to project " + projectId + ". Total connections: " +
                 projectConnections.get(projectId).size());
     }
 
@@ -32,7 +33,7 @@ public class ConnectionManager {
                 if (connections.isEmpty()) {
                     projectConnections.remove(projectId);
                 }
-                System.out.println("Client disconnected from project " + projectId);
+                Log.info("Client disconnected from project " + projectId);
             }
         }
     }
@@ -46,19 +47,19 @@ public class ConnectionManager {
                             .subscribe().with(
                                     success -> { /* Message sent successfully */ },
                                     failure -> {
-                                        System.err.println("Failed to send message to connection: " + failure.getMessage());
+                                        Log.error("Failed to send message to connection: " + failure.getMessage());
                                         connections.remove(connection);
                                         connectionToProject.remove(connection.id());
                                     }
                             );
                 } catch (Exception e) {
-                    System.err.println("Failed to send message to connection: " + e.getMessage());
+                    Log.error("Failed to send message to connection: " + e.getMessage());
                     connections.remove(connection);
                     connectionToProject.remove(connection.id());
                 }
             });
 
-            System.out.println("Broadcasted to " + connections.size() + " connections in project " + projectId);
+            Log.info("Broadcasted to " + connections.size() + " connections in project " + projectId);
         }
     }
 
